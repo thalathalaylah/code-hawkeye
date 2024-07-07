@@ -46,6 +46,14 @@ const GraphVisualization = () => {
     const cyRef = useRef<cytoscape.Core | null>(null)
     const [collapsedGroups, setCollapsedGroups] =
         useState<Set<[string, cytoscape.CollectionReturnValue]>>(new Set())
+    const layout = {
+        name: 'breadthfirst',
+        padding: 50,
+        directed: true,
+        circle: false,
+        grid: true,
+        animate: true
+    }
 
     useEffect(() => {
         const nodes: Node[] = [
@@ -77,7 +85,7 @@ const GraphVisualization = () => {
                 'C',
                 Option.none(),
                 Option.some('group2'),
-                []
+                ['F']
             ),
             new Node(
                 'D',
@@ -87,6 +95,12 @@ const GraphVisualization = () => {
             ),
             new Node(
                 'E',
+                Option.none(),
+                Option.some('group1'),
+                ['C', 'D']
+            ),
+            new Node(
+                'F',
                 Option.none(),
                 Option.some('group1'),
                 ['C', 'D']
@@ -148,13 +162,6 @@ const GraphVisualization = () => {
                     }
                 }
             ],
-            layout: {
-                name: 'cose',
-                padding: 50,
-                componentSpacing: 100,
-                nodeOverlap: 20,
-                animate: false
-            }
         })
 
         cy.on('tap', 'node', (evt) => {
@@ -164,6 +171,7 @@ const GraphVisualization = () => {
             }
         })
 
+        cy.layout(layout).run()
         cyRef.current = cy;
 
         return () => {
@@ -193,7 +201,7 @@ const GraphVisualization = () => {
             setCollapsedGroups(collapsedGroups.add([groupId, eles]))
         }
 
-        cy.layout({ name: 'cose', animate: false }).run()
+        cy.layout(layout).run()
     }
 
     return (
