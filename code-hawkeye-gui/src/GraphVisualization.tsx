@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useRef} from 'react';
 import cytoscape from 'cytoscape';
 import {Option} from "effect";
 
@@ -41,11 +41,21 @@ class Node {
     }
 }
 
+interface FoldedGroup {
+    id: NodeId,
+    removedElements: cytoscape.CollectionReturnValue
+    addedEdges: cytoscape.ElementDefinition[]
+}
+
 const GraphVisualization = () => {
     const containerRef = useRef(null)
     const cyRef = useRef<cytoscape.Core | null>(null)
-    const [collapsedGroups, setCollapsedGroups] =
-        useState<Set<[string, cytoscape.CollectionReturnValue]>>(new Set())
+
+    // 閉じたgroupを記録する
+    // グラフ構造の描画に変更があっても、GraphVisualization自体の再描画は行われないためuseStateを使っても値が更新されない
+    // そのため、letで情報を保持する必要がある
+    let foldedGroups: FoldedGroup[] = []
+
     const layout = {
         name: 'breadthfirst',
         padding: 50,
@@ -183,22 +193,22 @@ const GraphVisualization = () => {
         const cy = cyRef.current
         if (!cy) return;
         const groupId = groupNode.id()
-        const collapsedNodesOpt = Array.from(collapsedGroups).find(n => {
-            return n[0] === groupId
-        })
-        if (collapsedNodesOpt) {
+        const foldedGroupOpt = foldedGroups.find(f => f.id === groupId)
+
+        if (foldedGroupOpt) {
             // Expand the group
             groupNode.removeClass('collapsed-group')
-            collapsedNodesOpt[1].restore()
-            setCollapsedGroups((() => {
-                collapsedGroups.delete(collapsedNodesOpt)
-                return collapsedGroups
-            })())
+            foldedGroupOpt.removedElements.restore()
+            foldedGroups = foldedGroups.filter(n => n.id !== groupId)
         } else {
-            // Collapse the group
+            // Fold the group
             groupNode.addClass('collapsed-group')
             const eles = groupNode.children().remove()
-            setCollapsedGroups(collapsedGroups.add([groupId, eles]))
+            foldedGroups.push({
+                id: groupId,
+                removedElements: eles,
+                addedEdges: []
+            })
         }
 
         cy.layout(layout).run()
