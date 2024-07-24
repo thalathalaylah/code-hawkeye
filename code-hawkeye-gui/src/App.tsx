@@ -2,7 +2,7 @@ import { useState } from "react";
 import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/tauri";
 import "./App.css";
-import GraphVisualization from "./GraphVisualization.tsx";
+import DependencyGraph from "./DependencyGraph.tsx";
 
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
@@ -47,7 +47,7 @@ function App() {
       </form>
 
       <p>{greetMsg}</p>
-      <GraphVisualization />
+      <DependencyGraph />
     </div>
   );
 }

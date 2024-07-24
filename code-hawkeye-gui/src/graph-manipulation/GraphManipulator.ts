@@ -1,6 +1,6 @@
-import {useEffect, useRef} from 'react';
-import cytoscape from 'cytoscape';
 import {Option} from "effect";
+import cytoscape from "cytoscape";
+import {MutableRefObject} from "react";
 
 type NodeId = string;
 
@@ -47,26 +47,13 @@ interface FoldedGroup {
     addedEdges: cytoscape.ElementDefinition[]
 }
 
-const GraphVisualization = () => {
-    const containerRef = useRef(null)
-    const cyRef = useRef<cytoscape.Core | null>(null)
-
-    // 閉じたgroupを記録する
-    // グラフ構造の描画に変更があっても、GraphVisualization自体の再描画は行われないためuseStateを使っても値が更新されない
-    // そのため、letで情報を保持する必要がある
-    let foldedGroups: FoldedGroup[] = []
-
-    const layout = {
-        name: 'breadthfirst',
-        padding: 50,
-        directed: true,
-        circle: false,
-        grid: true,
-        animate: true
-    }
-
-    useEffect(() => {
-        const nodes: Node[] = [
+class GraphManipulator {
+    private cy: cytoscape
+    constructor(
+        private readonly layout: Object,
+        private containerRef: MutableRefObject<null>
+    ) {
+        const nodes = [
             new Node(
                 'group2',
                 Option.none(),
@@ -117,7 +104,7 @@ const GraphVisualization = () => {
             )
         ];
 
-        const cy = cytoscape({
+        this.cy = cytoscape({
             container: containerRef.current,
             elements: nodes.map(n => n.getElements()).flat(),
             style: [
@@ -173,52 +160,46 @@ const GraphVisualization = () => {
                 }
             ],
         })
+        const cy = this.cy
+        let foldedGroups: FoldedGroup[] = []
+        const toggleGroupCollapse = (groupNode: cytoscape.NodeSingular) => {
+            console.log(cy)
+            if (!cy) return;
+            const groupId = groupNode.id()
+            const foldedGroupOpt = foldedGroups.find(f => f.id === groupId)
 
-        cy.on('tap', 'node', (evt) => {
+            if (foldedGroupOpt) {
+                // Expand the group
+                groupNode.removeClass('collapsed-group')
+                foldedGroupOpt.removedElements.restore()
+                foldedGroups = foldedGroups.filter(n => n.id !== groupId)
+            } else {
+                // Fold the group
+                groupNode.addClass('collapsed-group')
+                const eles = groupNode.children().remove()
+                foldedGroups.push({
+                    id: groupId,
+                    removedElements: eles,
+                    addedEdges: []
+                })
+            }
+
+            cy.layout(layout).run()
+        }
+
+        this.cy.on('tap', 'node', (evt) => {
             const node = evt.target
             if (node.isParent() || node.hasClass('collapsed-group')) {
                 toggleGroupCollapse(node)
             }
         })
 
-        cy.layout(layout).run()
-        cyRef.current = cy;
-
-        return () => {
-            cy.destroy();
-        };
-    }, []);
-
-    const toggleGroupCollapse = (groupNode: cytoscape.NodeSingular) => {
-        const cy = cyRef.current
-        if (!cy) return;
-        const groupId = groupNode.id()
-        const foldedGroupOpt = foldedGroups.find(f => f.id === groupId)
-
-        if (foldedGroupOpt) {
-            // Expand the group
-            groupNode.removeClass('collapsed-group')
-            foldedGroupOpt.removedElements.restore()
-            foldedGroups = foldedGroups.filter(n => n.id !== groupId)
-        } else {
-            // Fold the group
-            groupNode.addClass('collapsed-group')
-            const eles = groupNode.children().remove()
-            foldedGroups.push({
-                id: groupId,
-                removedElements: eles,
-                addedEdges: []
-            })
-        }
-
-        cy.layout(layout).run()
+        this.cy.layout(layout).run()
     }
 
-    return (
-        <div className="w-full h-96 border border-gray-300 rounded-lg">
-            <div ref={containerRef} className="w-full h-full" />
-        </div>
-    );
-};
+    public getCy() {
+        return this.cy
+    }
+}
 
-export default GraphVisualization;
+export default GraphManipulator
