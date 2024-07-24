@@ -1,5 +1,5 @@
 import {Option} from "effect";
-import cytoscape from "cytoscape";
+import cytoscape, {LayoutOptions} from "cytoscape";
 import {MutableRefObject} from "react";
 
 type NodeId = string;
@@ -48,10 +48,10 @@ interface FoldedGroup {
 }
 
 class GraphManipulator {
-    private cy: cytoscape
+    private cy: cytoscape.Core
     constructor(
-        private readonly layout: Object,
-        private containerRef: MutableRefObject<null>
+        layout: LayoutOptions,
+        containerRef: MutableRefObject<null>
     ) {
         const nodes = [
             new Node(
@@ -163,7 +163,6 @@ class GraphManipulator {
         const cy = this.cy
         let foldedGroups: FoldedGroup[] = []
         const toggleGroupCollapse = (groupNode: cytoscape.NodeSingular) => {
-            console.log(cy)
             if (!cy) return;
             const groupId = groupNode.id()
             const foldedGroupOpt = foldedGroups.find(f => f.id === groupId)
